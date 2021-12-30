@@ -1,0 +1,240 @@
+General
+-------
+Written in C# using MEF
+Editor is in WPF
+File types: natstepfilter, natjmc
+The expression evaluator chooses to support "type visualizers" and "custom viewers / custom visualizers"
+Type visualizers are more powerful
+Custom viewers use IDebugCustomViewer
+VSExtensibility/VSPackages is the "new hotness"
+Add-ins removed in 2015
+Approach 1: type visualizer written in C++
+Approach 2: custom view / custom visualizer in C# (shows the magnifying glass)
+
+
+
+Concord Extensibility
+---------------------
+Concord is the built-in debug engine.
+You can extend the existing engine or write your own debug engine.
+I don't know when you'd want to write your own. Extending Concord is generally the way to go.
+Concord uses ATL. Maybe all vs extensions do?
+
+
+
+Active Template Library (ATL)
+-----------------------------
+Template library to help with COM programming.
+Successor to MFC.
+Doesn't look like we actually need to use it at all. It's just helper stuff.
+Common types: CComPtr<T>, CComBSTR, CComVariant, CComSafeArray<T>
+ATL_NO_VTABLE appears to be safe because classes are created as CComObject<Foo> (CRTP?)
+    Also seems like a silly micro-optimization
+
+
+
+Useful Paths
+------------
+%LOCALAPPDATA%\Microsoft\VisualStudio\16.0_ab7f106aExp\
+%LOCALAPPDATA%\Microsoft\VisualStudio\16.0_ab7f106aExp\Extensions\
+%LOCALAPPDATA%\Microsoft\VisualStudio\16.0_ab7f106aExp\privateregistry.bin
+%LOCALAPPDATA%\Temp\vsdebugeng.dll.log
+$(VSInstallDir)\VSSDK\VisualStudioIntegration\
+$(VSInstallDir)\VSSDK\VisualStudioIntegration\Tools\Bin\SetEngineLogMode.cmd
+$(VSInstallDir)\VSSDK\VisualStudioIntegration\Tools\Bin\CreateExpInstance.exe
+
+
+
+References
+----------
+https://docs.microsoft.com/en-us/visualstudio/extensibility/starting-to-develop-visual-studio-extensions
+https://docs.microsoft.com/en-us/visualstudio/extensibility/extensibility-hello-world
+https://docs.microsoft.com/en-us/visualstudio/extensibility/extending-the-editor-and-language-services
+https://docs.microsoft.com/en-us/visualstudio/extensibility/language-service-and-editor-extension-points
+https://docs.microsoft.com/en-us/visualstudio/extensibility/how-to-diagnose-extension-performance
+
+https://docs.microsoft.com/en-us/visualstudio/extensibility/internals/inside-the-visual-studio-sdk
+https://docs.microsoft.com/en-us/visualstudio/extensibility/debugger/visual-studio-debugger-extensibility
+https://docs.microsoft.com/en-us/visualstudio/extensibility/debugger/evaluating-a-watch-window-expression
+https://docs.microsoft.com/en-us/visualstudio/extensibility/debugger/sample-implementation-of-expression-evaluation
+https://docs.microsoft.com/en-us/visualstudio/extensibility/debugger/evaluating-a-watch-expression
+
+https://docs.microsoft.com/en-us/visualstudio/extensibility/debugger/implementing-type-visualizers-and-custom-viewers
+https://docs.microsoft.com/en-us/visualstudio/extensibility/debugger/visualizing-and-viewing-data
+https://docs.microsoft.com/en-us/visualstudio/extensibility/debugger/type-visualizer-and-custom-viewer
+https://docs.microsoft.com/en-us/visualstudio/extensibility/debugger/reference/ieevisualizerservice
+https://docs.microsoft.com/en-us/visualstudio/extensibility/debugger/reference/ieevisualizerdataprovider
+https://docs.microsoft.com/en-us/visualstudio/extensibility/debugger/reference/reference-visual-studio-debugging-apis
+
+https://docs.microsoft.com/en-us/visualstudio/debugger/create-custom-visualizers-of-data
+https://docs.microsoft.com/en-us/visualstudio/debugger/walkthrough-writing-a-visualizer-in-csharp
+
+https://github.com/Microsoft/ConcordExtensibilitySamples/wiki/Cpp-Custom-Visualizer-Sample
+https://github.com/Microsoft/ConcordExtensibilitySamples/wiki/Obtaining-the-Concord-API-headers,-libraries,-etc
+https://github.com/microsoft/VSSDK-Extensibility-Samples/tree/master/SqliteVisualizer
+https://marketplace.visualstudio.com/items?itemName=vsdbgplat.MicrosoftChildProcessDebuggingPowerTool
+https://github.com/Microsoft/ConcordExtensibilitySamples/wiki/Component-discovery-and-configuration
+
+https://marketplace.visualstudio.com/items?itemName=ArkadyShapkin.CDebuggerVisualizersforVS2019
+https://github.com/KindDragon/CPPDebuggerVisualizers
+https://marketplace.visualstudio.com/items?itemName=ArianKulp.DebuggerVisualizerPackbyArian
+https://github.com/atkulp/StringAsFilenameDebuggerVisualizer
+
+https://social.msdn.microsoft.com/Forums/en-US/home?forum=vsx
+https://gitter.im/Microsoft/extendvs
+https://www.visualstudioextensibility.com/overview/vs/
+
+https://docs.microsoft.com/en-us/cpp/build/reference/vcxproj-file-structure
+https://marketplace.visualstudio.com/items?itemName=MadsKristensen.ExtensibilityEssentials2019
+https://www.youtube.com/c/visualstudio/videos
+https://www.youtube.com/playlist?list=PLReL099Y5nReWwlUgypSKwptZm3ljLOhX
+https://www.youtube.com/playlist?list=PLReL099Y5nRdz9jvxuy_LgHFKowkx8tS4
+
+
+
+C++, VSSDK Setup
+----------------
+Install ATL
+Install VSSDK
+Install Child Process Debugging Power Tool
+Create solution
+Create ecs project
+    Create an extra solution to open the project when debugging the vsix
+Create visualizer project
+    Set configuration type to dll
+    Add dllmain.cpp with ATL entry point
+    Add module definition to export ATL functions
+    Add include directory: $(VSInstallDir)VSSDK\VisualStudioIntegration\Common\Inc
+    Add library directory: $(VSInstallDir)VSSDK\VisualStudioIntegration\Common\Lib\$(PlatformTarget)
+    Add library: VSDebugEng.lib
+    Add build customization: $(VSInstallDir)\VSSDK\VisualStudioIntegration\Tools\Bin\Microsoft.VSSDK.Debugger.VSDConfigTool.targets
+        Project > Build Dependencies > Build Customizations... > Find Existing...
+        This figures out which macros to use for the path automatically. Should be portable.
+    NOTE: VSSDK doesn't come with Microsoft.VSSDK.Debugger.VSDebugEng.targets
+    Add vsdconfigxml
+        vsdconfig.xsd is in $(VSInstallDir)Xml\Schemas and auto discovered.
+        <ItemGroup>
+            <VsdConfigXmlFiles Include="visualizer.vsdconfigxml" />
+        </ItemGroup>
+    Add natvis
+Create vsix project (empty C++ template)
+    Set configuration type to None
+    Add Microsoft.VsSDK.targets as a build customization
+        $(VSINSTALLDIR)\MSBuild\Microsoft\VisualStudio\v16.0\VSSDK\Microsoft.VsSDK.targets
+    Add vsix stuff to project file
+        <PropertyGroup>
+            <TargetVsixContainerName>visualizer.vsix</TargetVsixContainerName>
+            <ProjectTypeGuids>{82b43b9b-a64c-4715-b499-d71e9ca2bd60}</ProjectTypeGuids>
+            <GeneratePkgDefFile>false</GeneratePkgDefFile>
+            <IncludeAssemblyInVSIXContainer>false</IncludeAssemblyInVSIXContainer>
+            <IncludeDebugSymbolsInVSIXContainer>false</IncludeDebugSymbolsInVSIXContainer>
+            <IncludeDebugSymbolsInLocalVSIXDeployment>false</IncludeDebugSymbolsInLocalVSIXDeployment>
+            <CopyBuildOutputToOutputDirectory>false</CopyBuildOutputToOutputDirectory>
+            <CopyOutputSymbolsToOutputDirectory>false</CopyOutputSymbolsToOutputDirectory>
+        </PropertyGroup>
+    Add compile target to project file
+        <Target Name="CoreCompile">
+        </Target>
+    Add a source.extension.vsixmanifest file
+    Add child process debug settings
+        Set default to "Do not debug"
+        Set msvsmon.exe to "Attach debugger"
+        Set "Persist settings to" to a ChildProcessDbgSettings file
+    Add debugger defaults to the project file
+        <PropertyGroup>
+            <LocalDebuggerCommand>$(DevEnvDir)devenv.exe</LocalDebuggerCommand>
+            <LocalDebuggerCommandArguments>/rootsuffix Exp ..\ecs\ecs\sln</LocalDebuggerCommandArguments>
+        </PropertyGroup>
+    Add a project reference to visualizer
+        This is what causes the visualizer dll and vsdconf to be included in the vsix
+    Add a property sheet to include the visualizer natvis
+        This can be done from the Property Manager window
+        <ItemGroup>
+            <VSIXSourceItem Include="..\visualizer\visualizer.natvis" />
+        </ItemGroup>
+
+
+
+Issues
+------
+Random log file in the vsix project directory
+    Happens when you remove all PropertyGroups after Microsoft.Cpp.props in the project file
+vsixmanifest cannot be opened in manifest editor
+    Just doesn't work in C++ vsix projects
+vsix build error
+    Warning no object files specified; libraries used
+    Error entry point must be defined
+    Happens when configuration type isn't set to None
+vsdconfigxml build error
+    "Unknown argument '...'. Input files should have the '.vsdconfigxml' extension"
+    This happens when there is a space in the intermediate directory path for the visualizer project.
+    The command passed to vsdconfigtool.exe doesn't quote the path.
+Lots of exceptions when debugging
+    They're first chance exceptions. Microsoft uses exceptions for control flow, yay....
+    Nothing you can do about it. Though it's far worse if you use a C# vsix project
+Visualizer dll doesn't show up as a loaded module when debugging
+    It doesn't get loaded until you launch the debugger in the experimental instance.
+    If it still doesn't show up, it could be for a number of reasons.
+    Could be an x86 build, which appears not to work in VS 2019. You see a failed LoadLibrary call in the log/debug output
+    Could be mising exported symbols: DllCanUnloadNow and DllGetClassObject
+    Could be corrupted extension from re-using GUIDs (delete Extensions and privateregistry.bin)
+The vsix project doesn't build if there are zero prerequisites.
+CALL ERROR: IDkmCustomVisualizer.EvaluateVisualizedExpression (hr = 0x8ede0000
+Natvis: Warning: IDkmCustomVisualizer::EvaluateVisualizedExpression() failed.  The object will be formatted without the custom visualizer.  Error code: 0x8ede0000.
+    Probably missing exports for DllCanUnloadNow and DllGetClassObject
+DLL is never loaded, can't place breakpoints.
+    Reason 1 - corrupted extensions in the experimental instance.
+        I think this is from re-using GUIDs in mutliple vsixs (e.g. from copy-pasting a project)
+        Can be fixed by deleting the experimental instance, resetting it, or deleting the Extensions folder and privateregistry.bin within it.
+    Reason 2 - renamed ChildProcessDbgSettings
+        The name has to match the solution file
+        Continues to work until VS is restarted, then breaks
+    Reason 3 - renamed solution or deleted .vs
+        This does 2 things: 1) removes your breakpoints and 2) resets your build configuration
+        2 is tricky because it's easy to miss. It goes back to x64 and that doesn't build the vsix
+        Most obvious sign is there's no msbuild logging in the output window from the double build
+
+
+
+C++ Debugging
+-------------
+SetEngineLogMode.cmd [/exp] default|method
+    Regular VS requires a restart
+    Doesn't seem to affect the registry
+    Looks like there's a special vsregedit
+    Method appears in debugger output if a debugger is attached
+    Method goes to file if a debugger is not attached
+    C:\Users\akbyrd\AppData\Local\Temp\vsdebugeng.dll.log
+    Deleting privateregistry.bin resets this setting
+
+
+
+C++, Nuget Setup
+----------------
+TODO
+Microsoft.VSSDK.Debugger.VSDebugEng
+Microsoft.VSSDK.Debugger.VSDConfigTool
+Disable the built-in vsdconfig.xsd to fix intellisense
+Can't see logging
+    Enable native debugging in vsix project
+
+
+
+C#, VSSDK Setup
+---------------
+TODO
+
+
+
+C# Debugging
+------------
+Requires natvie debugging to be enabled
+Very slow when native debugging is enabled
+Might be able to modify the project file to enable _only_ native debugging
+Unstable. Exp instance hangs after continuing from a breakpoint in non-exp. Sometimes even without breaking.
+
+
+
+C#, Nuget Setup
+---------------
+TODO
