@@ -8,4 +8,7 @@
     <None Include="ecs-visualizer.vsdconfigxml" />
     <None Include="ecs-visualizer.props" />
   </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="ecs-visualizer.natvis" />
+  </ItemGroup>
 </Project>

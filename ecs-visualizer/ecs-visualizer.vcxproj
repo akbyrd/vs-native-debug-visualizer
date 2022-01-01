@@ -170,6 +170,9 @@
     <None Include="ecs-visualizer.props" />
     <None Include="ecs-visualizer.vsdconfigxml" />
   </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="ecs-visualizer.natvis" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VSINSTALLDIR)\VSSDK\VisualStudioIntegration\Tools\Bin\Microsoft.VSSDK.Debugger.VSDConfigTool.targets" />

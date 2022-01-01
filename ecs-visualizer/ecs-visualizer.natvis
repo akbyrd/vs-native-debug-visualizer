@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="Archetype">
+    <CustomVisualizer VisualizerId="48D7C7C7-77B0-4E13-BB74-5FDC7D2B4D96"/>
+  </Type>
+</AutoVisualizer>
