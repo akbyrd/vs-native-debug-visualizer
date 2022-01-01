@@ -11,4 +11,8 @@
   <Prerequisites>
     <Prerequisite Id="Microsoft.VisualStudio.Debugger" Version="[15.0,)" DisplayName="Visual Studio Debugger" />
   </Prerequisites>
+  <Assets>
+    <Asset Type="DebuggerEngineExtension" Path="ecs-visualizer.vsdconfig" />
+    <Asset Type="NativeVisualizer" Path="ecs-visualizer.natvis" />
+  </Assets>
 </PackageManifest>
