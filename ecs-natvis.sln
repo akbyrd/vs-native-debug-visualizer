@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ecs", "ecs\ecs.vcxproj", "{
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ecs-visualizer", "ecs-visualizer\ecs-visualizer.vcxproj", "{4BE25A10-F685-4FFB-BE91-FC151EFBEA6C}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ecs-vsix", "ecs-vsix\ecs-vsix.vcxproj", "{03B448BC-1753-406C-8347-975A5A80CDAD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -31,6 +33,14 @@ Global
 		{4BE25A10-F685-4FFB-BE91-FC151EFBEA6C}.Release|x64.Build.0 = Release|x64
 		{4BE25A10-F685-4FFB-BE91-FC151EFBEA6C}.Release|x86.ActiveCfg = Release|Win32
 		{4BE25A10-F685-4FFB-BE91-FC151EFBEA6C}.Release|x86.Build.0 = Release|Win32
+		{03B448BC-1753-406C-8347-975A5A80CDAD}.Debug|x64.ActiveCfg = Debug|x64
+		{03B448BC-1753-406C-8347-975A5A80CDAD}.Debug|x64.Build.0 = Debug|x64
+		{03B448BC-1753-406C-8347-975A5A80CDAD}.Debug|x86.ActiveCfg = Debug|Win32
+		{03B448BC-1753-406C-8347-975A5A80CDAD}.Debug|x86.Build.0 = Debug|Win32
+		{03B448BC-1753-406C-8347-975A5A80CDAD}.Release|x64.ActiveCfg = Release|x64
+		{03B448BC-1753-406C-8347-975A5A80CDAD}.Release|x64.Build.0 = Release|x64
+		{03B448BC-1753-406C-8347-975A5A80CDAD}.Release|x86.ActiveCfg = Release|Win32
+		{03B448BC-1753-406C-8347-975A5A80CDAD}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
