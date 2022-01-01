@@ -1,0 +1,5 @@
+LIBRARY "ecs-visualizer.dll"
+
+EXPORTS
+	DllCanUnloadNow   PRIVATE
+	DllGetClassObject PRIVATE
