@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
+  <Metadata>
+    <Identity Id="6038B7A0-5229-4397-A356-FEBCC6E6923D" Version="1.0" Language="en-US" Publisher="akbyrd" />
+    <DisplayName>ECS Visualizer</DisplayName>
+    <Description xml:space="preserve">ECS Visualizer</Description>
+  </Metadata>
+  <Installation>
+    <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[14.0, 17.0)" />
+  </Installation>
+  <Prerequisites>
+    <Prerequisite Id="Microsoft.VisualStudio.Debugger" Version="[15.0,)" DisplayName="Visual Studio Debugger" />
+  </Prerequisites>
+</PackageManifest>
