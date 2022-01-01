@@ -38,6 +38,7 @@ using namespace Microsoft::VisualStudio::Debugger::Evaluation;
 #pragma comment(lib, "VSDebugEng.lib")
 
 #include "ecs-visualizer.Contract.h"
+#include "types.h"
 
 class ATL_NO_VTABLE ECSVisualizerService :
     public ECSVisualizerServiceContract,
@@ -57,7 +58,76 @@ public:
         _Deref_out_opt_ DkmEvaluationResult**    ppResultObject
     )
     {
-        return E_NOTIMPL;
+        HRESULT hr;
+
+        // NOTE: Returning E_NOTIMPL is equivalent to falling back to the default behavior.
+
+        // NOTE: If this cast works the debugged value exists in the debuggee processes memory.
+        // I don't know which cases exists where this wouldn't be true.
+        auto pointerValueHome = DkmPointerValueHome::TryCast(pVisualizedExpression->ValueHome());
+        if (!pointerValueHome)
+            return E_NOTIMPL;
+
+        // TODO: ????
+        auto rootExpression = DkmRootVisualizedExpression::TryCast(pVisualizedExpression);
+        if (!rootExpression)
+            return E_NOTIMPL;
+
+        DkmRuntimeInstance* runtimeInstance = pVisualizedExpression->RuntimeInstance();
+        DkmProcess* targetProcess = runtimeInstance->Process();
+
+        Component component;
+        hr = targetProcess->ReadMemory(
+            pointerValueHome->Address(),
+            DkmReadMemoryFlags::None,
+            &component, sizeof(Component),
+            nullptr);
+        if (FAILED(hr))
+            return E_NOTIMPL;
+
+        CComPtr<DkmString> value;
+        hr = DkmString::Create(CString("Value!"), &value);
+        if (FAILED(hr))
+            return hr;
+
+        CComPtr<DkmString> editableValue;
+        hr = DkmString::Create(CString("Editable Value!"), &editableValue);
+        if (FAILED(hr))
+            return hr;
+
+        CComPtr<DkmDataAddress> address;
+        hr = DkmDataAddress::Create(
+            runtimeInstance,
+            pointerValueHome->Address(),
+            nullptr,
+            &address);
+        if (FAILED(hr))
+            return hr;
+
+        CComPtr<DkmSuccessEvaluationResult> result;
+        hr = DkmSuccessEvaluationResult::Create(
+            pVisualizedExpression->InspectionContext(),
+            pVisualizedExpression->StackFrame(),
+            rootExpression->Name(),
+            rootExpression->FullName(),
+            DkmEvaluationResultFlags::Expandable,
+            value,
+            editableValue,
+            rootExpression->Type(),
+            DkmEvaluationResultCategory::Class,
+            DkmEvaluationResultAccessType::None,
+            DkmEvaluationResultStorageType::None,
+            DkmEvaluationResultTypeModifierFlags::None,
+            address,
+            nullptr,
+            nullptr,
+            DkmDataItem::Null(),
+            &result);
+        if (FAILED(hr))
+            return hr;
+
+        *ppResultObject = result.Detach();
+        return S_OK;
     }
 
     HRESULT STDMETHODCALLTYPE UseDefaultEvaluationBehavior(
@@ -66,7 +136,55 @@ public:
         _Deref_out_opt_ DkmEvaluationResult**    ppDefaultEvaluationResult
     )
     {
-        return E_NOTIMPL;
+        HRESULT hr;
+
+        auto rootExpression = DkmRootVisualizedExpression::TryCast(pVisualizedExpression);
+        if (!rootExpression)
+            return E_NOTIMPL;
+
+        DkmInspectionContext* context = pVisualizedExpression->InspectionContext();
+        CAutoDkmClosePtr<DkmLanguageExpression> expression;
+        hr = DkmLanguageExpression::Create(
+            context->Language(),
+            DkmEvaluationFlags::TreatAsExpression,
+            rootExpression->FullName(),
+            DkmDataItem::Null(),
+            &expression);
+        if (FAILED(hr))
+            return hr;
+
+        // Duplicate the context and add ShowValueRaw to avoid recursively invoking this visualizer
+        CComPtr<DkmInspectionContext> newContext;
+        hr = DkmInspectionContext::Create(
+            context->InspectionSession(),
+            context->RuntimeInstance(),
+            context->Thread(),
+            context->Timeout(),
+            context->EvaluationFlags() | DkmEvaluationFlags::ShowValueRaw,
+            context->FuncEvalFlags(),
+            context->Radix(),
+            context->Language(),
+            context->ReturnValue(),
+            context->AdditionalVisualizationData(),
+            context->AdditionalVisualizationDataPriority(),
+            context->ReturnValues(),
+            context->SymbolsConnection(),
+            &newContext);
+        if (FAILED(hr))
+            return hr;
+
+        CComPtr<DkmEvaluationResult> result;
+        hr = pVisualizedExpression->EvaluateExpressionCallback(
+            newContext,
+            expression,
+            pVisualizedExpression->StackFrame(),
+            &result);
+        if (FAILED(hr))
+            return hr;
+
+        *ppDefaultEvaluationResult = result.Detach();
+        *pUseDefaultEvaluationBehavior = true;
+        return S_OK;
     }
 
     HRESULT STDMETHODCALLTYPE GetChildren(
