@@ -5,5 +5,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="ecs-visualizer.def" />
+    <None Include="ecs-visualizer.vsdconfigxml" />
+    <None Include="ecs-visualizer.props" />
   </ItemGroup>
 </Project>
