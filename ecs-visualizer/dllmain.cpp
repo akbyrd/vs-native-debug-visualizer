@@ -76,11 +76,11 @@ public:
         DkmRuntimeInstance* runtimeInstance = pVisualizedExpression->RuntimeInstance();
         DkmProcess* targetProcess = runtimeInstance->Process();
 
-        Component component;
+        Archetype archetype;
         hr = targetProcess->ReadMemory(
             pointerValueHome->Address(),
             DkmReadMemoryFlags::None,
-            &component, sizeof(Component),
+            &archetype, sizeof(Archetype),
             nullptr);
         if (FAILED(hr))
             return E_NOTIMPL;
@@ -126,7 +126,26 @@ public:
         if (FAILED(hr))
             return hr;
 
-        *ppResultObject = result.Detach();
+        //*ppResultObject = result.Detach();
+
+        DkmInspectionContext* context = pVisualizedExpression->InspectionContext();
+
+        CAutoDkmClosePtr<DkmLanguageExpression> expression;
+        hr = DkmLanguageExpression::Create(
+            context->Language(),
+            DkmEvaluationFlags::TreatAsExpression,
+            rootExpression->FullName(),
+            DkmDataItem::Null(),
+            &expression);
+        if (FAILED(hr))
+            return hr;
+
+        pVisualizedExpression->EvaluateExpressionCallback(
+            context,
+            expression,
+            pVisualizedExpression->StackFrame(),
+            ppResultObject
+        );
         return S_OK;
     }
 
