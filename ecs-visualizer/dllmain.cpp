@@ -85,13 +85,19 @@ public:
         if (FAILED(hr))
             return E_NOTIMPL;
 
-        CComPtr<DkmString> value;
-        hr = DkmString::Create(CString("Value!"), &value);
-        if (FAILED(hr))
-            return hr;
+        DkmArray<BYTE> componentType;
+        targetProcess->ReadMemoryString(
+            size_t(archetype.componentType),
+            DkmReadMemoryFlags::None,
+            sizeof(char),
+            1024,
+            &componentType
+         );
 
-        CComPtr<DkmString> editableValue;
-        hr = DkmString::Create(CString("Editable Value!"), &editableValue);
+        CComPtr<DkmString> value;
+        CString rawValue = {};
+        rawValue.Format(L"Count: %d { %S }", archetype.entityCount, componentType.Members);
+        hr = DkmString::Create(rawValue, &value);
         if (FAILED(hr))
             return hr;
 
@@ -112,7 +118,7 @@ public:
             rootExpression->FullName(),
             DkmEvaluationResultFlags::Expandable,
             value,
-            editableValue,
+            nullptr,
             rootExpression->Type(),
             DkmEvaluationResultCategory::Class,
             DkmEvaluationResultAccessType::None,
@@ -126,26 +132,7 @@ public:
         if (FAILED(hr))
             return hr;
 
-        //*ppResultObject = result.Detach();
-
-        DkmInspectionContext* context = pVisualizedExpression->InspectionContext();
-
-        CAutoDkmClosePtr<DkmLanguageExpression> expression;
-        hr = DkmLanguageExpression::Create(
-            context->Language(),
-            DkmEvaluationFlags::TreatAsExpression,
-            rootExpression->FullName(),
-            DkmDataItem::Null(),
-            &expression);
-        if (FAILED(hr))
-            return hr;
-
-        pVisualizedExpression->EvaluateExpressionCallback(
-            context,
-            expression,
-            pVisualizedExpression->StackFrame(),
-            ppResultObject
-        );
+        *ppResultObject = result.Detach();
         return S_OK;
     }
 
