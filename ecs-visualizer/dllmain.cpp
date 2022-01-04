@@ -39,6 +39,7 @@ using namespace Microsoft::VisualStudio::Debugger::Evaluation;
 
 #include "ecs-visualizer.Contract.h"
 #include "types.h"
+#include <typeinfo>
 
 class ATL_NO_VTABLE ECSVisualizerService :
     public ECSVisualizerServiceContract,
@@ -142,54 +143,11 @@ public:
         _Deref_out_opt_ DkmEvaluationResult**    ppDefaultEvaluationResult
     )
     {
-        HRESULT hr;
-
         auto rootExpression = DkmRootVisualizedExpression::TryCast(pVisualizedExpression);
         if (!rootExpression)
             return E_NOTIMPL;
 
-        DkmInspectionContext* context = pVisualizedExpression->InspectionContext();
-        CAutoDkmClosePtr<DkmLanguageExpression> expression;
-        hr = DkmLanguageExpression::Create(
-            context->Language(),
-            DkmEvaluationFlags::TreatAsExpression,
-            rootExpression->FullName(),
-            DkmDataItem::Null(),
-            &expression);
-        if (FAILED(hr))
-            return hr;
-
-        // Duplicate the context and add ShowValueRaw to avoid recursively invoking this visualizer
-        CComPtr<DkmInspectionContext> newContext;
-        hr = DkmInspectionContext::Create(
-            context->InspectionSession(),
-            context->RuntimeInstance(),
-            context->Thread(),
-            context->Timeout(),
-            context->EvaluationFlags() | DkmEvaluationFlags::ShowValueRaw,
-            context->FuncEvalFlags(),
-            context->Radix(),
-            context->Language(),
-            context->ReturnValue(),
-            context->AdditionalVisualizationData(),
-            context->AdditionalVisualizationDataPriority(),
-            context->ReturnValues(),
-            context->SymbolsConnection(),
-            &newContext);
-        if (FAILED(hr))
-            return hr;
-
-        CComPtr<DkmEvaluationResult> result;
-        hr = pVisualizedExpression->EvaluateExpressionCallback(
-            newContext,
-            expression,
-            pVisualizedExpression->StackFrame(),
-            &result);
-        if (FAILED(hr))
-            return hr;
-
-        *ppDefaultEvaluationResult = result.Detach();
-        *pUseDefaultEvaluationBehavior = true;
+        *pUseDefaultEvaluationBehavior = false;
         return S_OK;
     }
 
@@ -201,7 +159,24 @@ public:
         _Deref_out_ DkmEvaluationResultEnumContext**         ppEnumContext
     )
     {
-        return E_NOTIMPL;
+        // NOTE: Just ignore the request size. This isn't an array so we don't have any large
+        // memory concerns here.
+
+        HRESULT hr;
+
+        CComPtr<DkmEvaluationResultEnumContext> enumContext;
+        hr = DkmEvaluationResultEnumContext::Create(
+            1,
+            pVisualizedExpression->StackFrame(),
+            pVisualizedExpression->InspectionContext(),
+            DkmDataItem::Null(),
+            &enumContext
+        );
+        if (FAILED(hr))
+            return hr;
+
+        *ppEnumContext = enumContext.Detach();
+        return S_OK;
     }
 
     HRESULT STDMETHODCALLTYPE GetItems(
@@ -212,7 +187,178 @@ public:
         _Out_ DkmArray<DkmChildVisualizedExpression*>* pItems
     )
     {
-        return E_NOTIMPL;
+        HRESULT hr;
+
+        if (StartIndex != 0 || Count != 1)
+            return E_UNEXPECTED;
+
+        hr = DkmAllocArray(1, pItems);
+        if (FAILED(hr))
+            return hr;
+
+        DkmVisualizedExpression* parentExpression = pVisualizedExpression;
+        DkmInspectionContext* parentContext = parentExpression->InspectionContext();
+
+        DkmPointerValueHome* parentValueHome = DkmPointerValueHome::TryCast(parentExpression->ValueHome());
+        if (!parentValueHome)
+            return E_UNEXPECTED;
+
+
+        CComPtr<DkmString> childExpressionText;
+        hr = DkmString::Create(L"entityCount", &childExpressionText);
+        if (FAILED(hr))
+            return hr;
+
+        DkmEvaluationFlags_t flags = DkmEvaluationFlags::TreatAsExpression;
+        CComPtr<DkmLanguageExpression> childExpression;
+        hr = DkmLanguageExpression::Create(
+            parentContext->Language(),
+            flags,
+            childExpressionText,
+            DkmDataItem::Null(),
+            &childExpression
+        );
+        if (FAILED(hr))
+            return hr;
+
+        CComPtr<DkmInspectionContext> childContext;
+        hr = DkmInspectionContext::Create(
+            parentContext->InspectionSession(),
+            parentContext->RuntimeInstance(),
+            parentContext->Thread(),
+            parentContext->Timeout(),
+            flags,
+            parentContext->FuncEvalFlags(),
+            parentContext->Radix(),
+            parentContext->Language(),
+            parentContext->ReturnValue(),
+            &childContext
+        );
+        if (FAILED(hr))
+            return hr;
+
+        CComPtr<DkmEvaluationResult> childResult;
+        hr = parentExpression->EvaluateExpressionCallback(
+            childContext,
+            childExpression,
+            parentExpression->StackFrame(),
+            &childResult
+        );
+        if (FAILED(hr))
+            return hr;
+
+        auto childSuccessResult = DkmSuccessEvaluationResult::TryCast(childResult);
+        if (!childSuccessResult)
+            return E_FAIL;
+
+        size_t childAddress = childSuccessResult->Address()->Value();
+        CComPtr<DkmPointerValueHome> childHome;
+        hr = DkmPointerValueHome::Create(childAddress, &childHome);
+        if (FAILED(hr))
+            return hr;
+
+        DkmString* displayValue = childSuccessResult->Value();
+        DkmString* displayName = childExpressionText;
+
+        auto& type = typeid(Archetype::entityCount);
+        CString rawDisplayType;
+        rawDisplayType.Format(L"%S", type.name());
+        CComPtr<DkmString> displayType;
+        hr = DkmString::Create(rawDisplayType, &displayType);
+        if (FAILED(hr))
+            return hr;
+
+        CComPtr<DkmSuccessEvaluationResult> childDisplaySuccessResult;
+        hr = DkmSuccessEvaluationResult::Create(
+            parentContext,
+            parentExpression->StackFrame(),
+            displayName,
+            childSuccessResult->FullName(),
+            childSuccessResult->Flags(),
+            displayValue,
+            nullptr,
+            displayType,
+            childSuccessResult->Category(),
+            childSuccessResult->Access(),
+            childSuccessResult->StorageType(),
+            childSuccessResult->TypeModifierFlags(),
+            childSuccessResult->Address(),
+            childSuccessResult->CustomUIVisualizers(),
+            childSuccessResult->ExternalModules(),
+            DkmDataItem::Null(),
+            &childDisplaySuccessResult
+        );
+        if (FAILED(hr))
+            return hr;
+
+        CComPtr<DkmChildVisualizedExpression> childDisplayVisExpression;
+        hr = DkmChildVisualizedExpression::Create(
+            parentContext,
+            parentExpression->VisualizerId(),
+            parentExpression->SourceId(),
+            parentExpression->StackFrame(),
+            childHome,
+            childDisplaySuccessResult,
+            parentExpression,
+            0,
+            DkmDataItem::Null(),
+            &childDisplayVisExpression
+        );
+        if (FAILED(hr))
+            return hr;
+
+        pItems->Members[0] = childDisplayVisExpression.Detach();
+        return S_OK;
+
+#if false
+        CComPtr<DkmPointerValueHome> entityCountValueHome;
+        hr = DkmPointerValueHome::Create(
+            archetypeValueHome->Address() + offsetof(Archetype, entityCount),
+            &entityCountValueHome
+        );
+        if (FAILED(hr))
+            return hr;
+
+        auto rootExpression = DkmRootVisualizedExpression::TryCast(pVisualizedExpression);
+        if (!rootExpression)
+            return E_NOTIMPL;
+
+        CAutoDkmClosePtr<DkmLanguageExpression> languageExpression;
+        hr = DkmLanguageExpression::Create(
+            pVisualizedExpression->InspectionContext()->Language(),
+            DkmEvaluationFlags::TreatAsExpression,
+            rootExpression->FullName(),
+            DkmDataItem::Null(),
+            &languageExpression
+        );
+        if (FAILED(hr))
+            return hr;
+
+        CComPtr<DkmEvaluationResult> entityCountResult;
+        pVisualizedExpression->EvaluateExpressionCallback(
+            pVisualizedExpression->InspectionContext(),
+            languageExpression,
+            pVisualizedExpression->StackFrame(),
+            &entityCountResult
+        );
+        if (FAILED(hr))
+            return hr;
+
+        hr = DkmChildVisualizedExpression::Create(
+            pVisualizedExpression->InspectionContext(),
+            pVisualizedExpression->VisualizerId(),
+            pVisualizedExpression->SourceId(),
+            pVisualizedExpression->StackFrame(),
+            entityCountValueHome,
+            entityCountResult.p,
+            pVisualizedExpression,
+            0,
+            DkmDataItem::Null(),
+            &pItems->Members[0]
+        );
+        if (FAILED(hr))
+            return hr;
+#endif
     }
 
     HRESULT STDMETHODCALLTYPE SetValueAsString(
