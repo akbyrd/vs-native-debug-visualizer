@@ -19,6 +19,6 @@
        settings. -->
   <PropertyGroup>
     <LocalDebuggerCommand>$(DevEnvDir)devenv.exe</LocalDebuggerCommand>
-    <LocalDebuggerCommandArguments>/rootsuffix Exp ..\ecs\ecs.sln</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>/rootsuffix Exp /Run ..\ecs\ecs.sln</LocalDebuggerCommandArguments>
   </PropertyGroup>
 </Project>
