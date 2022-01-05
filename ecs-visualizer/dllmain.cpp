@@ -83,7 +83,6 @@ struct TrivialIUnknown : IUnknown
 
 struct __declspec(uuid("{8B9106D3-5262-4324-B948-66D1A2E76B26}")) ECSVisualizerDataItem : TrivialIUnknown
 {
-    CComPtr<DkmEvaluationResult> defaultRootEval;
 };
 
 class ATL_NO_VTABLE ECSVisualizerService :
@@ -164,7 +163,6 @@ public:
 
         CComPtr<ECSVisualizerDataItem> data;
         data.Attach(new ECSVisualizerDataItem {});
-        data->defaultRootEval = *ppResultObject;
         hr = pVisualizedExpression->SetDataItem(DkmDataCreationDisposition::CreateNew, data);
         if (FAILED(hr))
             return hr;
@@ -178,15 +176,7 @@ public:
         _Deref_out_opt_ DkmEvaluationResult**    ppDefaultEvaluationResult
     )
     {
-        HRESULT hr;
-
-        ECSVisualizerDataItem* data;
-        hr = pVisualizedExpression->GetDataItem(&data);
-        if (FAILED(hr))
-            return hr;
-
-        *ppDefaultEvaluationResult = data->defaultRootEval.p;
-        *pUseDefaultEvaluationBehavior = true;
+        *pUseDefaultEvaluationBehavior = false;
         return S_OK;
     }
 
@@ -198,7 +188,55 @@ public:
         _Deref_out_ DkmEvaluationResultEnumContext**         ppEnumContext
     )
     {
-        return E_NOTIMPL;
+        HRESULT hr;
+
+        // NOTE: For some reason, trying to re-use the result from EvaluateVisualizedExpression (by storing
+        // it in a data item and retrieving it) doesn't work. It recurses infinitely when we call
+        // GetChildrenCallback.
+
+        DkmRootVisualizedExpression* rootExpression = DkmRootVisualizedExpression::TryCast(pVisualizedExpression);
+
+        CAutoDkmClosePtr<DkmLanguageExpression> languageExpression;
+        hr = DkmLanguageExpression::Create(
+            pInspectionContext->Language(),
+            pInspectionContext->EvaluationFlags(),
+            rootExpression->FullName(),
+            DkmDataItem::Null(),
+            &languageExpression);
+        if (FAILED(hr))
+            return hr;
+
+        CComPtr<DkmEvaluationResult> rootEvalResult;
+        hr = pVisualizedExpression->EvaluateExpressionCallback(
+            pInspectionContext,
+            languageExpression,
+            pVisualizedExpression->StackFrame(),
+            &rootEvalResult);
+        if (FAILED(hr))
+            return hr;
+
+        // TODO: DkmFreeArray will release interfaces, but I don't think it closes the Dkm objects
+        CAutoDkmArray<DkmEvaluationResult*> defaultInitialChildren;
+        hr = pVisualizedExpression->GetChildrenCallback(
+            rootEvalResult,
+            InitialRequestSize,
+            pInspectionContext,
+            &defaultInitialChildren,
+            ppEnumContext
+        );
+        if (FAILED(hr))
+            return hr;
+
+        // NOTE: It looks like we always get 0 and setting it to 1 is ignored by the default
+        // expression evaluator. Just assume that's always the case so we can keep all the logic
+        // in GetItems.
+        if (InitialRequestSize != 0)
+            return E_UNEXPECTED;
+
+        if (defaultInitialChildren.Length != 0)
+            return E_UNEXPECTED;
+
+        return S_OK;
     }
 
     HRESULT STDMETHODCALLTYPE GetItems(
@@ -209,7 +247,80 @@ public:
         _Out_ DkmArray<DkmChildVisualizedExpression*>* pItems
     )
     {
-        return E_NOTIMPL;
+        HRESULT hr;
+
+        CAutoDkmArray<DkmEvaluationResult*> defaultChildEvals;
+        hr = pVisualizedExpression->GetItemsCallback(
+            pEnumContext,
+            StartIndex,
+            Count,
+            &defaultChildEvals
+        );
+        if (FAILED(hr))
+            return hr;
+
+        DWORD childCount = defaultChildEvals.Length;
+        hr = DkmAllocArray(childCount, pItems);
+        if (FAILED(hr))
+            return hr;
+
+        // NOTE: This seems like the easiest way to handle partial failures. If we attempt to return
+        // a failure code from the middle of the loop the we'll technically leak the results we were
+        // already able to add to it. If we return a success code and leave Length set to the amount
+        // we allocated space for the debugger will blindly dereference the remaining null elements
+        // and crash the debugging session. Instead, we set the length accurately, ignore failure
+        // codes from DkmChildVisualizedExpression::Create, and always return success. This means
+        // the debugger will show whichever results we managed to make, a red error icon for
+        // those we didn't, and we won't leak anything. This is at the expense of swallowing error
+        // codes, but the UI doesn't display them anyway.
+        //
+        // Many (all?) Dkm objects are automatically closed when the debugging session ends. But I
+        // don't if that releases the COM interfaces and actually allows the objects to be
+        // destroyed. We'd also leak objects during session even if it does, so I'd rather just be a
+        // little safer here.
+        pItems->Length = 0;
+
+        for (DWORD i = 0; i < childCount; i++)
+        {
+            DkmEvaluationResult* defaultChildEval = defaultChildEvals.Members[i];
+            DkmChildVisualizedExpression** defaultChildVis = &pItems->Members[i];
+
+            CComPtr<DkmExpressionValueHome> defaultChildHome;
+            DkmSuccessEvaluationResult* defaultChildEvalSuccess = DkmSuccessEvaluationResult::TryCast(defaultChildEval);
+            if (defaultChildEvalSuccess)
+            {
+                DkmPointerValueHome* realHome;
+                hr = DkmPointerValueHome::Create(defaultChildEvalSuccess->Address()->Value(), &realHome);
+                defaultChildHome.Attach(realHome);
+            }
+            else
+            {
+                DkmFakeValueHome* fakeHome;
+                hr = DkmFakeValueHome::Create(0, &fakeHome);
+                defaultChildHome.Attach(fakeHome);
+            }
+            if (FAILED(hr))
+                continue;
+
+            hr = DkmChildVisualizedExpression::Create(
+                defaultChildEval->InspectionContext(),
+                pVisualizedExpression->VisualizerId(),
+                pVisualizedExpression->SourceId(),
+                pVisualizedExpression->StackFrame(),
+                defaultChildHome,
+                defaultChildEval,
+                pVisualizedExpression,
+                i,
+                DkmDataItem::Null(),
+                defaultChildVis
+            );
+            if (FAILED(hr))
+                continue;
+
+            pItems->Length++;
+        }
+
+        return S_OK;
     }
 
     HRESULT STDMETHODCALLTYPE SetValueAsString(
