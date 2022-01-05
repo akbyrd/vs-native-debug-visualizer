@@ -140,9 +140,6 @@ public:
         if (FAILED(hr))
             return hr;
 
-        // NOTE: This evaluation could end up returning a failed result. However, if it does we want
-        // to return the failed result anyway so the UI tells us something went wrong.
-
         // NOTE: The default expression evaluator doesn't work well for functions that return arrays
         // of pointers in the Autos window. All we see is the address (e.g. {0xbaadf00d})
 
@@ -153,11 +150,12 @@ public:
         // 1) A local variable array of values in the Watch window
         // 2) A local variable array of pointers in the Watch window
         // 3) A function returning an array of values in the Autos window
+        CComPtr<DkmEvaluationResult> intermediateResult;
         hr = pVisualizedExpression->EvaluateExpressionCallback(
             rawInspectionContext,
             languageExpression,
             pVisualizedExpression->StackFrame(),
-            ppResultObject);
+            &intermediateResult);
         if (FAILED(hr))
             return hr;
 
@@ -167,6 +165,45 @@ public:
         if (FAILED(hr))
             return hr;
 
+        DkmSuccessEvaluationResult* successIntermediateResult = DkmSuccessEvaluationResult::TryCast(intermediateResult);
+        if (!successIntermediateResult)
+        {
+            // NOTE: This evaluation could end up returning a failed result. If it does we want to
+            // return the failed result so the UI tells us something went wrong.
+            *ppResultObject = intermediateResult.Detach();
+            return S_OK;
+        }
+
+        CComPtr<DkmString> value;
+        hr = DkmString::Create(L"Value!", &value);
+        if (FAILED(hr))
+            return hr;
+
+        CComPtr<DkmSuccessEvaluationResult> finalResult;
+        hr = DkmSuccessEvaluationResult::Create(
+            successIntermediateResult->InspectionContext(),
+            successIntermediateResult->StackFrame(),
+            successIntermediateResult->Name(),
+            successIntermediateResult->FullName(),
+            successIntermediateResult->Flags(),
+            value,
+            successIntermediateResult->EditableValue(),
+            successIntermediateResult->Type(),
+            successIntermediateResult->Category(),
+            successIntermediateResult->Access(),
+            successIntermediateResult->StorageType(),
+            successIntermediateResult->TypeModifierFlags(),
+            successIntermediateResult->Address(),
+            successIntermediateResult->CustomUIVisualizers(),
+            successIntermediateResult->ExternalModules(),
+            successIntermediateResult->RefreshButtonText(),
+            DkmDataItem::Null(),
+            &finalResult
+        );
+        if (FAILED(hr))
+            return hr;
+
+        *ppResultObject = finalResult.Detach();
         return S_OK;
     }
 
