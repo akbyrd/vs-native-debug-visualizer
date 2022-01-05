@@ -4,4 +4,7 @@
     <None Include="ecs-vsix.props" />
     <None Include="source.extension.vsixmanifest" />
   </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="concord.natvis" />
+  </ItemGroup>
 </Project>

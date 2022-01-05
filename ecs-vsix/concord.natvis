@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010"> 
+  <Type Name="Microsoft::VisualStudio::Debugger::DkmString">
+    <DisplayString>{{ {m_Value,su} }}</DisplayString>
+  </Type>
+  <Type Name="Microsoft::VisualStudio::Debugger::Evaluation::DkmLanguageExpression">
+    <DisplayString>{{ {m_pText,na} }}</DisplayString>
+  </Type>
+  <Type Name="Microsoft::VisualStudio::Debugger::Evaluation::DkmEvaluationResult">
+    <DisplayString>{{ {m_TagValue} }}</DisplayString>
+  </Type>
+</AutoVisualizer>
