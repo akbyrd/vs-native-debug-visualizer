@@ -39,6 +39,53 @@ using namespace Microsoft::VisualStudio::Debugger::Evaluation;
 
 #include "ecs-visualizer.Contract.h"
 
+struct TrivialIUnknown : IUnknown
+{
+    TrivialIUnknown()
+    {
+        m_refCount = 1;
+    }
+
+    // IUnknown Implementation
+
+    volatile LONG m_refCount;
+
+    ULONG __stdcall AddRef()
+    {
+        return (ULONG)InterlockedIncrement(&m_refCount);
+    }
+
+    ULONG __stdcall Release()
+    {
+        ULONG result = (ULONG)InterlockedDecrement(&m_refCount);
+        if (result == 0)
+        {
+            delete this;
+        }
+        return result;
+    }
+
+    HRESULT __stdcall QueryInterface(REFIID riid, _Deref_out_ void** ppv)
+    {
+        if (riid == __uuidof(IUnknown))
+        {
+            *ppv = static_cast<IUnknown*>(this);
+            AddRef();
+            return S_OK;
+        }
+        else
+        {
+            *ppv = NULL;
+            return E_NOINTERFACE;
+        }
+    }
+};
+
+struct __declspec(uuid("{8B9106D3-5262-4324-B948-66D1A2E76B26}")) ECSVisualizerDataItem : TrivialIUnknown
+{
+    CComPtr<DkmEvaluationResult> defaultRootEval;
+};
+
 class ATL_NO_VTABLE ECSVisualizerService :
     public ECSVisualizerServiceContract,
     public CComObjectRootEx<CComMultiThreadModel>,
@@ -115,6 +162,13 @@ public:
         if (FAILED(hr))
             return hr;
 
+        CComPtr<ECSVisualizerDataItem> data;
+        data.Attach(new ECSVisualizerDataItem {});
+        data->defaultRootEval = *ppResultObject;
+        hr = pVisualizedExpression->SetDataItem(DkmDataCreationDisposition::CreateNew, data);
+        if (FAILED(hr))
+            return hr;
+
         return S_OK;
     }
 
@@ -126,45 +180,12 @@ public:
     {
         HRESULT hr;
 
-        CComPtr<DkmInspectionContext> rawInspectionContext;
-        hr = DkmInspectionContext::Create(
-            pVisualizedExpression->InspectionContext()->InspectionSession(),
-            pVisualizedExpression->InspectionContext()->RuntimeInstance(),
-            pVisualizedExpression->InspectionContext()->Thread(),
-            pVisualizedExpression->InspectionContext()->Timeout(),
-            pVisualizedExpression->InspectionContext()->EvaluationFlags() | DkmEvaluationFlags::ShowValueRaw,
-            pVisualizedExpression->InspectionContext()->FuncEvalFlags(),
-            pVisualizedExpression->InspectionContext()->Radix(),
-            pVisualizedExpression->InspectionContext()->Language(),
-            pVisualizedExpression->InspectionContext()->ReturnValue(),
-            pVisualizedExpression->InspectionContext()->AdditionalVisualizationData(),
-            pVisualizedExpression->InspectionContext()->AdditionalVisualizationDataPriority(),
-            pVisualizedExpression->InspectionContext()->ReturnValues(),
-            pVisualizedExpression->InspectionContext()->SymbolsConnection(),
-            &rawInspectionContext);
+        ECSVisualizerDataItem* data;
+        hr = pVisualizedExpression->GetDataItem(&data);
         if (FAILED(hr))
             return hr;
 
-        DkmRootVisualizedExpression* rootExpression = DkmRootVisualizedExpression::TryCast(pVisualizedExpression);
-
-        CAutoDkmClosePtr<DkmLanguageExpression> languageExpression;
-        hr = DkmLanguageExpression::Create(
-            rawInspectionContext->Language(),
-            rawInspectionContext->EvaluationFlags(),
-            rootExpression->FullName(),
-            DkmDataItem::Null(),
-            &languageExpression);
-        if (FAILED(hr))
-            return hr;
-
-        hr = pVisualizedExpression->EvaluateExpressionCallback(
-            rawInspectionContext,
-            languageExpression,
-            pVisualizedExpression->StackFrame(),
-            ppDefaultEvaluationResult);
-        if (FAILED(hr))
-            return hr;
-
+        *ppDefaultEvaluationResult = data->defaultRootEval.p;
         *pUseDefaultEvaluationBehavior = true;
         return S_OK;
     }
