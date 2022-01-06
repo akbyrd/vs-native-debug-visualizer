@@ -83,6 +83,7 @@ struct TrivialIUnknown : IUnknown
 
 struct __declspec(uuid("{8B9106D3-5262-4324-B948-66D1A2E76B26}")) ECSVisualizerDataItem : TrivialIUnknown
 {
+    CComPtr<DkmEvaluationResultEnumContext> defaultEnumContext;
 };
 
 class ATL_NO_VTABLE ECSVisualizerService :
@@ -194,6 +195,11 @@ public:
         // it in a data item and retrieving it) doesn't work. It recurses infinitely when we call
         // GetChildrenCallback.
 
+        ECSVisualizerDataItem* data;
+        hr = pVisualizedExpression->GetDataItem(&data);
+        if (FAILED(hr))
+            return hr;
+
         DkmRootVisualizedExpression* rootExpression = DkmRootVisualizedExpression::TryCast(pVisualizedExpression);
 
         CAutoDkmClosePtr<DkmLanguageExpression> languageExpression;
@@ -222,7 +228,7 @@ public:
             InitialRequestSize,
             pInspectionContext,
             &defaultInitialChildren,
-            ppEnumContext
+            &data->defaultEnumContext
         );
         if (FAILED(hr))
             return hr;
@@ -235,6 +241,16 @@ public:
 
         if (defaultInitialChildren.Length != 0)
             return E_UNEXPECTED;
+
+        hr = DkmEvaluationResultEnumContext::Create(
+            data->defaultEnumContext->Count() - 1,
+            data->defaultEnumContext->StackFrame(),
+            data->defaultEnumContext->InspectionContext(),
+            DkmDataItem::Null(),
+            ppEnumContext
+        );
+        if (FAILED(hr))
+            return hr;
 
         return S_OK;
     }
@@ -249,9 +265,14 @@ public:
     {
         HRESULT hr;
 
+        ECSVisualizerDataItem* data;
+        hr = pVisualizedExpression->GetDataItem(&data);
+        if (FAILED(hr))
+            return hr;
+
         CAutoDkmArray<DkmEvaluationResult*> defaultChildEvals;
         hr = pVisualizedExpression->GetItemsCallback(
-            pEnumContext,
+            data->defaultEnumContext,
             StartIndex,
             Count,
             &defaultChildEvals
