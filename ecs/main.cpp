@@ -1,3 +1,8 @@
+struct NoVis
+{
+	int x;
+};
+
 struct DefaultVis
 {
 	int x;
@@ -10,6 +15,10 @@ struct CustomVis
 
 int main()
 {
+	NoVis noVis = {};
+	NoVis  avNo[] = {  noVis };
+	NoVis* apNo[] = { &noVis };
+
 	DefaultVis defaultVis = {};
 	DefaultVis  avDefault[] = {  defaultVis };
 	DefaultVis* apDefault[] = { &defaultVis };

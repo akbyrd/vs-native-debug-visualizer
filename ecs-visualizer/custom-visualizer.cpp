@@ -29,7 +29,59 @@ public:
         _Deref_out_opt_ DkmEvaluationResult**    ppResultObject
     )
     {
-        return E_NOTIMPL;
+        HRESULT hr;
+
+        // Duplicate the context and add ShowValueRaw to avoid recursively invoking this visualizer
+        CComPtr<DkmInspectionContext> rawInspectionContext;
+        hr = DkmInspectionContext::Create(
+            pVisualizedExpression->InspectionContext()->InspectionSession(),
+            pVisualizedExpression->InspectionContext()->RuntimeInstance(),
+            pVisualizedExpression->InspectionContext()->Thread(),
+            pVisualizedExpression->InspectionContext()->Timeout(),
+            pVisualizedExpression->InspectionContext()->EvaluationFlags() | DkmEvaluationFlags::ShowValueRaw,
+            pVisualizedExpression->InspectionContext()->FuncEvalFlags(),
+            pVisualizedExpression->InspectionContext()->Radix(),
+            pVisualizedExpression->InspectionContext()->Language(),
+            pVisualizedExpression->InspectionContext()->ReturnValue(),
+            pVisualizedExpression->InspectionContext()->AdditionalVisualizationData(),
+            pVisualizedExpression->InspectionContext()->AdditionalVisualizationDataPriority(),
+            pVisualizedExpression->InspectionContext()->ReturnValues(),
+            pVisualizedExpression->InspectionContext()->SymbolsConnection(),
+            &rawInspectionContext);
+        if (FAILED(hr))
+            return hr;
+
+        DkmRootVisualizedExpression* rootExpression = DkmRootVisualizedExpression::TryCast(pVisualizedExpression);
+
+        CAutoDkmClosePtr<DkmLanguageExpression> languageExpression;
+        hr = DkmLanguageExpression::Create(
+            rawInspectionContext->Language(),
+            rawInspectionContext->EvaluationFlags(),
+            rootExpression->FullName(),
+            DkmDataItem::Null(),
+            &languageExpression);
+        if (FAILED(hr))
+            return hr;
+
+        // NOTE: The default expression evaluator doesn't work well for functions that return arrays
+        // of pointers in the Autos window. All we see is the address (e.g. {0xbaadf00d})
+
+        // TODO: For some reason just calling back to the default expression evaluator doesn't work
+        // for arrays.When we don't have a custom visualizer we see a non-expandable result that has
+        // the expected one-line summary of the type (i.e. {{field1=... field2=... }}). When our
+        // custom visualizer is enabled all we see is {???}. This can be seen in at least 3 cases:
+        // 1) A local variable array of values in the Watch window
+        // 2) A local variable array of pointers in the Watch window
+        // 3) A function returning an array of values in the Autos window
+        hr = pVisualizedExpression->EvaluateExpressionCallback(
+            rawInspectionContext,
+            languageExpression,
+            pVisualizedExpression->StackFrame(),
+            ppResultObject);
+        if (FAILED(hr))
+            return hr;
+
+        return S_OK;
     }
 
     HRESULT STDMETHODCALLTYPE UseDefaultEvaluationBehavior(
@@ -38,7 +90,8 @@ public:
         _Deref_out_opt_ DkmEvaluationResult**    ppDefaultEvaluationResult
     )
     {
-        return E_NOTIMPL;
+        *pUseDefaultEvaluationBehavior = false;
+        return S_OK;
     }
 
     HRESULT STDMETHODCALLTYPE GetChildren(
@@ -49,7 +102,61 @@ public:
         _Deref_out_ DkmEvaluationResultEnumContext**         ppEnumContext
     )
     {
-        return E_NOTIMPL;
+        HRESULT hr;
+
+        // Duplicate the context and add ShowValueRaw to avoid recursively invoking this visualizer
+        CComPtr<DkmInspectionContext> rawInspectionContext;
+        hr = DkmInspectionContext::Create(
+            pVisualizedExpression->InspectionContext()->InspectionSession(),
+            pVisualizedExpression->InspectionContext()->RuntimeInstance(),
+            pVisualizedExpression->InspectionContext()->Thread(),
+            pVisualizedExpression->InspectionContext()->Timeout(),
+            pVisualizedExpression->InspectionContext()->EvaluationFlags() | DkmEvaluationFlags::ShowValueRaw,
+            pVisualizedExpression->InspectionContext()->FuncEvalFlags(),
+            pVisualizedExpression->InspectionContext()->Radix(),
+            pVisualizedExpression->InspectionContext()->Language(),
+            pVisualizedExpression->InspectionContext()->ReturnValue(),
+            pVisualizedExpression->InspectionContext()->AdditionalVisualizationData(),
+            pVisualizedExpression->InspectionContext()->AdditionalVisualizationDataPriority(),
+            pVisualizedExpression->InspectionContext()->ReturnValues(),
+            pVisualizedExpression->InspectionContext()->SymbolsConnection(),
+            &rawInspectionContext);
+        if (FAILED(hr))
+            return hr;
+
+        DkmRootVisualizedExpression* rootExpression = DkmRootVisualizedExpression::TryCast(pVisualizedExpression);
+
+        CAutoDkmClosePtr<DkmLanguageExpression> languageExpression;
+        hr = DkmLanguageExpression::Create(
+            rawInspectionContext->Language(),
+            rawInspectionContext->EvaluationFlags(),
+            rootExpression->FullName(),
+            DkmDataItem::Null(),
+            &languageExpression);
+        if (FAILED(hr))
+            return hr;
+
+        CComPtr<DkmEvaluationResult> defaultRootEval;
+        hr = pVisualizedExpression->EvaluateExpressionCallback(
+            rawInspectionContext,
+            languageExpression,
+            pVisualizedExpression->StackFrame(),
+            &defaultRootEval);
+        if (FAILED(hr))
+            return hr;
+
+        CAutoDkmArray<DkmEvaluationResult*> defaultInitialChildren;
+        hr = pVisualizedExpression->GetChildrenCallback(
+            defaultRootEval,
+            InitialRequestSize,
+            pInspectionContext,
+            &defaultInitialChildren,
+            ppEnumContext
+        );
+        if (FAILED(hr))
+            return hr;
+
+        return S_OK;
     }
 
     HRESULT STDMETHODCALLTYPE GetItems(
@@ -60,7 +167,61 @@ public:
         _Out_ DkmArray<DkmChildVisualizedExpression*>* pItems
     )
     {
-        return E_NOTIMPL;
+        HRESULT hr;
+
+        CAutoDkmArray<DkmEvaluationResult*> defaultChildEvals;
+        hr = pVisualizedExpression->GetItemsCallback(
+            pEnumContext,
+            StartIndex,
+            Count,
+            &defaultChildEvals
+        );
+        if (FAILED(hr))
+            return hr;
+
+        hr = DkmAllocArray(defaultChildEvals.Length, pItems);
+        if (FAILED(hr))
+            return hr;
+
+        for (DWORD i = 0; i < defaultChildEvals.Length; i++)
+        {
+            DkmEvaluationResult* defaultChildEval = defaultChildEvals.Members[i];
+            DkmChildVisualizedExpression** defaultChildVis = &pItems->Members[i];
+
+            CComPtr<DkmExpressionValueHome> defaultChildHome;
+            DkmSuccessEvaluationResult* defaultChildEvalSuccess = DkmSuccessEvaluationResult::TryCast(defaultChildEval);
+            if (defaultChildEvalSuccess)
+            {
+                DkmPointerValueHome* realHome;
+                hr = DkmPointerValueHome::Create(defaultChildEvalSuccess->Address()->Value(), &realHome);
+                defaultChildHome.Attach(realHome);
+            }
+            else
+            {
+                DkmFakeValueHome* fakeHome;
+                hr = DkmFakeValueHome::Create(0, &fakeHome);
+                defaultChildHome.Attach(fakeHome);
+            }
+            if (FAILED(hr))
+                return hr;
+
+            hr = DkmChildVisualizedExpression::Create(
+                defaultChildEval->InspectionContext(),
+                pVisualizedExpression->VisualizerId(),
+                pVisualizedExpression->SourceId(),
+                pVisualizedExpression->StackFrame(),
+                defaultChildHome,
+                defaultChildEval,
+                pVisualizedExpression,
+                i,
+                DkmDataItem::Null(),
+                defaultChildVis
+            );
+            if (FAILED(hr))
+                return hr;
+        }
+
+        return S_OK;
     }
 
     HRESULT STDMETHODCALLTYPE SetValueAsString(
