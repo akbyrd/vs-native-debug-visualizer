@@ -3,7 +3,4 @@
 	<Type Name="DefaultVis">
 		<CustomVisualizer VisualizerId="4DD872A0-CBBD-4966-8399-C23ADD320B17"/>
 	</Type>
-	<Type Name="CustomVis">
-		<CustomVisualizer VisualizerId="56CFD3BE-A59F-498D-803C-D97DA890D946"/>
-	</Type>
 </AutoVisualizer>

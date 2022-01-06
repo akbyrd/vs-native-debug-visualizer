@@ -63,16 +63,10 @@ public:
         if (FAILED(hr))
             return hr;
 
-        // NOTE: The default expression evaluator doesn't work well for functions that return arrays
-        // of pointers in the Autos window. All we see is the address (e.g. {0xbaadf00d})
-
         // TODO: For some reason just calling back to the default expression evaluator doesn't work
-        // for arrays.When we don't have a custom visualizer we see a non-expandable result that has
-        // the expected one-line summary of the type (i.e. {{field1=... field2=... }}). When our
-        // custom visualizer is enabled all we see is {???}. This can be seen in at least 3 cases:
-        // 1) A local variable array of values in the Watch window
-        // 2) A local variable array of pointers in the Watch window
-        // 3) A function returning an array of values in the Autos window
+        // for arrays. When we don't have a visualizer we see an expandable result that has the
+        // expected one-line summary of the type (i.e. {{field1=... field2=... }}). When our
+        // visualizer is enabled all we see is {???}.
         hr = pVisualizedExpression->EvaluateExpressionCallback(
             rawInspectionContext,
             languageExpression,

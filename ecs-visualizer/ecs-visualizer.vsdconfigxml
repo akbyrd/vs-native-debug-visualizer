@@ -14,15 +14,5 @@
 				</InterfaceGroup>
 			</Implements>
 		</Class>
-		<Class Name="CustomVisualizerService" ClassId="{3730CF7C-E229-4224-BF0B-CD1B2A046FA7}" WorkerProcessSupported="true">
-			<Implements>
-				<InterfaceGroup>
-					<Filter>
-						<VisualizerId RequiredValue="56CFD3BE-A59F-498D-803C-D97DA890D946"/>
-					</Filter>
-					<Interface Name="IDkmCustomVisualizer"/>
-				</InterfaceGroup>
-			</Implements>
-		</Class>
 	</NativeComponent>
 </Configuration>

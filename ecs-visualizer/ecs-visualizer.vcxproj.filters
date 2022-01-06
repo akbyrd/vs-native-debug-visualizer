@@ -3,7 +3,6 @@
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="default-visualizer.cpp" />
-    <ClCompile Include="custom-visualizer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ecs-visualizer.def" />
