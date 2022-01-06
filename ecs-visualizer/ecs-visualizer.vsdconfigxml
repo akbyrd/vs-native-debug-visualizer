@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Configuration xmlns="http://schemas.microsoft.com/vstudio/vsdconfig/2008">
+	<NativeComponent
+	  ComponentId="{0DB8ACAC-6929-4C2B-8BD8-4E5321151EC3}"
+	  ComponentLevel="9991500"
+	  ModuleName="ecs-visualizer.dll">
+		<Class Name="ECSVisualizerService" ClassId="{2E6354D9-5BFD-4E0B-AE21-76E93917AFD5}" WorkerProcessSupported="true">
+			<Implements>
+				<InterfaceGroup>
+					<Filter>
+						<VisualizerId RequiredValue="4DD872A0-CBBD-4966-8399-C23ADD320B17"/>
+					</Filter>
+					<Interface Name="IDkmCustomVisualizer"/>
+				</InterfaceGroup>
+			</Implements>
+		</Class>
+	</NativeComponent>
+</Configuration>
