@@ -12,4 +12,13 @@
 		<GeneratePkgDefFile>false</GeneratePkgDefFile>
 		<IncludeAssemblyInVSIXContainer>false</IncludeAssemblyInVSIXContainer>
 	</PropertyGroup>
+
+	<!-- This provides a set of default debugging options to be able to launch the ecs project with
+		our vsix installed. Debugging settings are normally stored in the vcxproj.user file. We could
+		just version that file, but that would lead to VCS noise when developers change their local
+		settings. -->
+	<PropertyGroup>
+		<LocalDebuggerCommand>$(DevEnvDir)devenv.exe</LocalDebuggerCommand>
+		<LocalDebuggerCommandArguments>/rootsuffix Exp ..\ecs\ecs.sln</LocalDebuggerCommandArguments>
+	</PropertyGroup>
 </Project>
