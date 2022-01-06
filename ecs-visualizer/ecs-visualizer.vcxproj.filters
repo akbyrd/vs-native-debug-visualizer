@@ -10,4 +10,7 @@
     <None Include="vsdconfig.xsd" />
     <None Include="ecs-visualizer.vsdconfigxml" />
   </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="ecs-visualizer.natvis" />
+  </ItemGroup>
 </Project>
