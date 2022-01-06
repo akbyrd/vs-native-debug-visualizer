@@ -154,6 +154,11 @@
     <None Include="ecs-vsix.props" />
     <None Include="source.extension.vsixmanifest" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ecs-visualizer\ecs-visualizer.vcxproj">
+      <Project>{50f4f169-912e-47e3-9f82-8f9d628409bf}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="..\packages\Microsoft.VSSDK.BuildTools.17.0.5232\tools\vssdk\Microsoft.VsSDK.targets" />

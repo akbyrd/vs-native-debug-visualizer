@@ -21,4 +21,9 @@
 		<LocalDebuggerCommand>$(DevEnvDir)devenv.exe</LocalDebuggerCommand>
 		<LocalDebuggerCommandArguments>/rootsuffix Exp /Run ..\ecs\ecs.sln</LocalDebuggerCommandArguments>
 	</PropertyGroup>
+
+	<!-- This pulls the natvis file into the vsix -->
+	<ItemGroup>
+		<VSIXSourceItem Include="..\ecs-visualizer\ecs-visualizer.natvis" />
+	</ItemGroup>
 </Project>
