@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ecs", "ecs\ecs.vcxproj", "{
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ecs-visualizer", "ecs-visualizer\ecs-visualizer.vcxproj", "{50F4F169-912E-47E3-9F82-8F9D628409BF}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ecs-vsix", "ecs-vsix\ecs-vsix.vcxproj", "{9C5860EB-75C0-4BF0-A555-C0664CF06B87}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -31,6 +33,14 @@ Global
 		{50F4F169-912E-47E3-9F82-8F9D628409BF}.Release|x64.Build.0 = Release|x64
 		{50F4F169-912E-47E3-9F82-8F9D628409BF}.Release|x86.ActiveCfg = Release|Win32
 		{50F4F169-912E-47E3-9F82-8F9D628409BF}.Release|x86.Build.0 = Release|Win32
+		{9C5860EB-75C0-4BF0-A555-C0664CF06B87}.Debug|x64.ActiveCfg = Debug|x64
+		{9C5860EB-75C0-4BF0-A555-C0664CF06B87}.Debug|x64.Build.0 = Debug|x64
+		{9C5860EB-75C0-4BF0-A555-C0664CF06B87}.Debug|x86.ActiveCfg = Debug|Win32
+		{9C5860EB-75C0-4BF0-A555-C0664CF06B87}.Debug|x86.Build.0 = Debug|Win32
+		{9C5860EB-75C0-4BF0-A555-C0664CF06B87}.Release|x64.ActiveCfg = Release|x64
+		{9C5860EB-75C0-4BF0-A555-C0664CF06B87}.Release|x64.Build.0 = Release|x64
+		{9C5860EB-75C0-4BF0-A555-C0664CF06B87}.Release|x86.ActiveCfg = Release|Win32
+		{9C5860EB-75C0-4BF0-A555-C0664CF06B87}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
