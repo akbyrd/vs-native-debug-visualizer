@@ -83,7 +83,6 @@ struct TrivialIUnknown : IUnknown
 
 struct __declspec(uuid("{8B9106D3-5262-4324-B948-66D1A2E76B26}")) ECSVisualizerDataItem : TrivialIUnknown
 {
-    CComPtr<DkmEvaluationResultEnumContext> defaultEnumContext;
 };
 
 class ATL_NO_VTABLE ECSVisualizerService :
@@ -228,7 +227,7 @@ public:
             InitialRequestSize,
             pInspectionContext,
             &defaultInitialChildren,
-            &data->defaultEnumContext
+            ppEnumContext
         );
         if (FAILED(hr))
             return hr;
@@ -241,16 +240,6 @@ public:
 
         if (defaultInitialChildren.Length != 0)
             return E_UNEXPECTED;
-
-        hr = DkmEvaluationResultEnumContext::Create(
-            data->defaultEnumContext->Count() - 1,
-            data->defaultEnumContext->StackFrame(),
-            data->defaultEnumContext->InspectionContext(),
-            DkmDataItem::Null(),
-            ppEnumContext
-        );
-        if (FAILED(hr))
-            return hr;
 
         return S_OK;
     }
@@ -272,7 +261,7 @@ public:
 
         CAutoDkmArray<DkmEvaluationResult*> defaultChildEvals;
         hr = pVisualizedExpression->GetItemsCallback(
-            data->defaultEnumContext,
+            pEnumContext,
             StartIndex,
             Count,
             &defaultChildEvals
