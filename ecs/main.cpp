@@ -1,14 +1,22 @@
-#include "types.h"
+struct DefaultVis
+{
+	int x;
+};
+
+struct CustomVis
+{
+	int x;
+};
 
 int main()
 {
-	Component component = {};
-	component.x = 42;
+	DefaultVis defaultVis = {};
+	DefaultVis  avDefault[] = {  defaultVis };
+	DefaultVis* apDefault[] = { &defaultVis };
 
-	Archetype archetype = {};
-	archetype.entityCount = 1;
-	archetype.componentType = "Component";
-	archetype.componentArray = &component;
+	CustomVis customVis = {};
+	CustomVis  avCustom[] = {  customVis };
+	CustomVis* apCustom[] = { &customVis };
 
 	return 0;
 }

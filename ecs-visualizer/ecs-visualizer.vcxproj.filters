@@ -2,6 +2,8 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="default-visualizer.cpp" />
+    <ClCompile Include="custom-visualizer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ecs-visualizer.def" />

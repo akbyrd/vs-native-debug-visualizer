@@ -4,11 +4,21 @@
 	  ComponentId="{0DB8ACAC-6929-4C2B-8BD8-4E5321151EC3}"
 	  ComponentLevel="9991500"
 	  ModuleName="ecs-visualizer.dll">
-		<Class Name="ECSVisualizerService" ClassId="{2E6354D9-5BFD-4E0B-AE21-76E93917AFD5}" WorkerProcessSupported="true">
+		<Class Name="DefaultVisualizerService" ClassId="{2E6354D9-5BFD-4E0B-AE21-76E93917AFD5}" WorkerProcessSupported="true">
 			<Implements>
 				<InterfaceGroup>
 					<Filter>
 						<VisualizerId RequiredValue="4DD872A0-CBBD-4966-8399-C23ADD320B17"/>
+					</Filter>
+					<Interface Name="IDkmCustomVisualizer"/>
+				</InterfaceGroup>
+			</Implements>
+		</Class>
+		<Class Name="CustomVisualizerService" ClassId="{3730CF7C-E229-4224-BF0B-CD1B2A046FA7}" WorkerProcessSupported="true">
+			<Implements>
+				<InterfaceGroup>
+					<Filter>
+						<VisualizerId RequiredValue="56CFD3BE-A59F-498D-803C-D97DA890D946"/>
 					</Filter>
 					<Interface Name="IDkmCustomVisualizer"/>
 				</InterfaceGroup>
