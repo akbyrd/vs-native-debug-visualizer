@@ -1,3 +1,29 @@
+To Do
+-----
+TODO: Add a new child
+TODO: Test with function returns
+TODO: Test with array of value/pointer return from function
+TODO: Test with format specifiers
+TODO: Figure out which interfaces need to be closed vs released
+TODO: Remove [Raw View]
+----
+TODO: Read memory to set custom text
+TODO: Add a custom string to list all components
+TODO: Test all the edge cases for reading memory
+TODO: Add aos and soa specifiers
+TODO: Access a global variable to get to registry
+
+
+
+Packaging / Distributing
+------------------------
+Include x86 and x64 versions
+Handle pre-2019 with no worker process
+Handle 2019 with no worker process
+Test with 2022
+
+
+
 General
 -------
 Written in C# using MEF
