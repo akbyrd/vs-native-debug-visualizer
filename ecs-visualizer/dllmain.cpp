@@ -38,6 +38,7 @@ using namespace Microsoft::VisualStudio::Debugger::Evaluation;
 #pragma comment(lib, "VSDebugEng.lib")
 
 #include "ecs-visualizer.Contract.h"
+#include "types.h"
 
 struct TrivialIUnknown : IUnknown
 {
@@ -329,12 +330,14 @@ public:
 
         for (DWORD i = 0; i < childCount; i++)
         {
+            UINT32 index = StartIndex + i;
+
             DkmEvaluationResult* defaultChildEval = defaultChildEvals.Members[i];
-            DkmChildVisualizedExpression** defaultChildVis = &pItems->Members[i];
+            DkmChildVisualizedExpression** childVis = &pItems->Members[i];
 
             CComPtr<DkmExpressionValueHome> defaultChildHome;
             DkmSuccessEvaluationResult* defaultChildEvalSuccess = DkmSuccessEvaluationResult::TryCast(defaultChildEval);
-            if (defaultChildEvalSuccess)
+            if (defaultChildEvalSuccess && defaultChildEvalSuccess->Address())
             {
                 DkmPointerValueHome* realHome;
                 hr = DkmPointerValueHome::Create(defaultChildEvalSuccess->Address()->Value(), &realHome);
@@ -349,20 +352,129 @@ public:
             if (FAILED(hr))
                 continue;
 
-            hr = DkmChildVisualizedExpression::Create(
-                defaultChildEval->InspectionContext(),
-                pVisualizedExpression->VisualizerId(),
-                pVisualizedExpression->SourceId(),
-                pVisualizedExpression->StackFrame(),
-                defaultChildHome,
-                defaultChildEval,
-                pVisualizedExpression,
-                i,
-                DkmDataItem::Null(),
-                defaultChildVis
-            );
-            if (FAILED(hr))
-                continue;
+            if (index != 2)
+            {
+                hr = DkmChildVisualizedExpression::Create(
+                    defaultChildEval->InspectionContext(),
+                    pVisualizedExpression->VisualizerId(),
+                    pVisualizedExpression->SourceId(),
+                    pVisualizedExpression->StackFrame(),
+                    defaultChildHome,
+                    defaultChildEval,
+                    pVisualizedExpression,
+                    i,
+                    DkmDataItem::Null(),
+                    childVis
+                );
+                if (FAILED(hr))
+                    continue;
+            }
+            else
+            {
+                DkmProcess* process = pVisualizedExpression->RuntimeInstance()->Process();
+
+                // TODO: I suspect this doesn't work in all cases
+                auto rootHome = DkmPointerValueHome::TryCast(pVisualizedExpression->ValueHome());
+                if (!rootHome)
+                    continue;
+
+                Archetype archetype;
+                hr = process->ReadMemory(
+                    rootHome->Address(),
+                    DkmReadMemoryFlags::None,
+                    &archetype, sizeof(Archetype),
+                    nullptr);
+                if (FAILED(hr))
+                    continue;
+
+                CAutoDkmArray<BYTE> componentType;
+                hr = process->ReadMemoryString(
+                    (UINT64) archetype.componentType,
+                    DkmReadMemoryFlags::None,
+                    sizeof(archetype.componentType[0]),
+                    128,
+                    &componentType
+                );
+                if (FAILED(hr))
+                    continue;
+
+                // TODO: Handle this gracefully
+                if (componentType.Length == 0)
+                    continue;
+
+                CString customChildTextRaw;
+                customChildTextRaw.Format(L"(%S*) %s", componentType.Members, defaultChildEval->FullName()->Value());
+
+                CComPtr<DkmString> customChildText;
+                hr = DkmString::Create(customChildTextRaw, &customChildText);
+                if (FAILED(hr))
+                    continue;
+
+                CAutoDkmClosePtr<DkmLanguageExpression> customChildExpression;
+                hr = DkmLanguageExpression::Create(
+                    defaultChildEval->InspectionContext()->Language(),
+                    defaultChildEval->InspectionContext()->EvaluationFlags(),
+                    customChildText,
+                    DkmDataItem::Null(),
+                    &customChildExpression);
+                if (FAILED(hr))
+                    continue;
+
+                CComPtr<DkmEvaluationResult> customChildEval;
+                hr = pVisualizedExpression->EvaluateExpressionCallback(
+                    defaultChildEval->InspectionContext(),
+                    customChildExpression,
+                    defaultChildEval->StackFrame(),
+                    &customChildEval
+                );
+                if (FAILED(hr))
+                    continue;
+
+                DkmSuccessEvaluationResult* customChildEvalSuccess = DkmSuccessEvaluationResult::TryCast(customChildEval);
+                if (!customChildEvalSuccess)
+                    continue;
+
+                CComPtr<DkmSuccessEvaluationResult> customChildEvalSuccessClean;
+                hr = DkmSuccessEvaluationResult::Create(
+                    customChildEvalSuccess->InspectionContext(),
+                    customChildEvalSuccess->StackFrame(),
+                    defaultChildEvalSuccess->Name(),
+                    customChildEvalSuccess->FullName(),
+                    customChildEvalSuccess->Flags(),
+                    customChildEvalSuccess->Value(),
+                    customChildEvalSuccess->EditableValue(),
+                    customChildEvalSuccess->Type(),
+                    customChildEvalSuccess->Category(),
+                    customChildEvalSuccess->Access(),
+                    customChildEvalSuccess->StorageType(),
+                    customChildEvalSuccess->TypeModifierFlags(),
+                    customChildEvalSuccess->Address(),
+                    customChildEvalSuccess->CustomUIVisualizers(),
+                    customChildEvalSuccess->ExternalModules(),
+                    customChildEvalSuccess->RefreshButtonText(),
+                    DkmDataItem::Null(),
+                    &customChildEvalSuccessClean
+                );
+                if (FAILED(hr))
+                    continue;
+
+                // TODO: Expansion only shows ...
+                // Looks like it's because expanding the child calls back into this visualizer, starting with UseDefaultEvaluationBehavior
+                hr = DkmChildVisualizedExpression::Create(
+                    customChildEvalSuccess->InspectionContext(),
+                    pVisualizedExpression->VisualizerId(),
+                    pVisualizedExpression->SourceId(),
+                    pVisualizedExpression->StackFrame(),
+                    defaultChildHome,
+                    customChildEvalSuccessClean,
+                    pVisualizedExpression,
+                    i,
+                    DkmDataItem::Null(),
+                    childVis
+                );
+                if (FAILED(hr))
+                    continue;
+            }
 
             pItems->Length++;
         }
